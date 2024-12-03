@@ -18,6 +18,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -29,6 +33,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import ru.webarmour.qrzxing.data.ItemDb
 import ru.webarmour.qrzxing.presentation.MainViewModel
 
@@ -48,6 +54,10 @@ fun MainScreen(
 ) {
     var selectedItem by remember { mutableIntStateOf(0) }
 
+    val snackbarState = remember {SnackbarHostState()}
+
+    var lastItem: ItemDb? = null
+
     Scaffold(
 
         floatingActionButton = {
@@ -59,6 +69,9 @@ fun MainScreen(
                 Text(text = "QR")
             }
 
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarState)
         }
     ) { paddingValues ->
         Box(
@@ -68,9 +81,9 @@ fun MainScreen(
         ) {
             ItemsScreen(
                 items = itemsList,
-                viewModel = viewModel
+                viewModel = viewModel,
+                snackbarHostState = snackbarState
             )
-
         }
 
     }
@@ -78,11 +91,12 @@ fun MainScreen(
 
 @Composable
 fun ItemsScreen(
+    snackbarHostState: SnackbarHostState,
     items: List<ItemDb>,
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
 ) {
     val itemsList = remember { mutableStateListOf<ItemDb>() }
-
+    val scope = rememberCoroutineScope()
     LaunchedEffect(items) {
         itemsList.clear()
         itemsList.addAll(items)
@@ -101,6 +115,16 @@ fun ItemsScreen(
                     confirmValueChange = {
                         if (it == SwipeToDismissBoxValue.EndToStart) {
                             viewModel.deleteItem(product)
+                            scope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Item deleted",
+                                    actionLabel = "Undo",
+                                    duration = SnackbarDuration.Short
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    viewModel.insertItem(product)
+                                }
+                            }
                         }
                         true
                     },
