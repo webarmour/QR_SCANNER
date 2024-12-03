@@ -1,4 +1,4 @@
-package ru.webarmour.qrzxing.ui.theme
+package ru.webarmour.qrzxing.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
